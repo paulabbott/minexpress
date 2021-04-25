@@ -1,8 +1,0 @@
-b.png
-body1.png
-einstein.png
-head.png
-knee.png
-mirror.png
-placenta.png
-qr-replaceme.png
