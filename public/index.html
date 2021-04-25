@@ -1,0 +1,485 @@
+<html>
+
+<head>
+    <!-- DEBUG:split your code -->
+    <script>
+
+        // var inputImages = [
+        //     "dog.png", "cat200-moreblack.png", "jspaint.png"
+        // ]
+        var inputImages = [
+            "black.png",
+            "head.png",
+            "einstein.png",
+            "knee.png",
+            "mirror.png",
+            "b.png",
+            "placenta.png",
+            "qr-replaceme.png",
+            "brain-norm.png",
+            "dog.png",
+            "skyscrappers.png",
+            "cat200-moreblack.png",
+            "deadbird.png",
+            "ida-fossil.png",
+            "knee-brace.png",
+            "LE.png",
+            "OT.png",
+            "VA.png",
+            "EH.png",
+            "noise.png",
+            "feet1.png",
+            "feet2.png",
+            "feet3.png",
+            "RIP.png",
+            "black.png",
+        ]
+
+
+
+        var inputImagesIndex = -1
+        var inputImagesCounts = []
+
+        //DEBUG
+        // inputImagesCounts = [21, 20, 17]
+
+        //maybe get rid of some of these globals.
+        var con1;
+        var canvasWidth, canvasHeight;
+        var data1, data2;
+        var buf, buf8, data;
+        var stage = "erode"
+        var erodeCount = 0;
+        var compCount1 = 1;
+        var compCount2 = 1;
+        var compRatio = 1;
+        var compCount = 0
+        var timerID;
+        var sourceCanvas;
+        var MRICtx;
+        var bodyCtx;
+        const bodyimage = new Image();
+
+        //use in memory images rather than on page.
+        var image1 = document.createElement('img');
+        var image2 = document.createElement('img');
+        //whats the best way to then set the source on these are wait till there loaded.
+        // not sure I even need to any more?
+
+
+        //IDEA: load first image, don'ty know if we need it yet.
+        // fromImgArray[0] = new Image();
+        // fromImgArray[0].src = 'jspaint.png';
+        // console.log("fromImgArray=", fromImgArray)
+        // toImgArray[0] = new Image();
+        // toImgArray[0].src = 'cat-grey.png';
+
+        window.addEventListener('load', (event) => {
+            console.log('window loaded')
+            document.getElementById("button0").addEventListener('click', function (event) { button0Click(event) });
+            document.getElementById("button1").addEventListener('click', function (event) { button1Click(event) });
+            document.getElementById("button2").addEventListener('click', function (event) { button2Click(event) });
+            document.getElementById("button3").addEventListener('click', function (event) { button3Click(event) });
+            document.getElementById("bodyCanvas").addEventListener('mousemove', function (event) { bodyImgMove(event) });
+            setup();
+
+        });
+
+        function setup() {
+            console.log('in setup')
+            //wait for onload?
+
+            canvas1 = document.getElementById("canvas1");
+            canvas1a = document.getElementById("canvas1a");
+            canvas2 = document.getElementById("canvas2");
+            canvas3 = document.getElementById("canvas3");
+            compCanvas = document.getElementById("compCanvas");
+            bodyCanvas = document.getElementById("bodyCanvas");
+            MRICanvas = document.getElementById("MRICanvas");
+            canvasWidth = canvas1.width;
+            canvasHeight = canvas1.height;
+            con1 = canvas1.getContext("2d");
+            con1a = canvas1a.getContext("2d");
+            con2 = canvas2.getContext("2d");
+            compCtx = compCanvas.getContext("2d");
+            bodyCtx = bodyCanvas.getContext("2d");
+            MRICtx = MRICanvas.getContext("2d");
+
+            bodySetup();
+        }
+
+
+        function loadImageIntoCanvas(file, canvas) {
+            let ctx = canvas.getContext("2d");
+            let tempimage = document.createElement('img');
+            tempimage.src = file
+            tempimage.onload = function () {
+                console.log(file + " loaded into " + tempimage)
+                console.log("canvas size", canvas.width);
+                ctx.drawImage(tempimage, 0, 0, canvas.width, canvas.height);
+                // setup();
+            }
+            tempimage.onerror = function () {
+                console.log("ERROR: could not load " + file)
+            }
+        }
+
+        function loadImage2(file, image, callback) {
+            image.src = file
+            image.onload = function () {
+                callback()
+            }
+            image.onerror = function () {
+                console.log("ERROR: could not load " + file)
+            }
+        }
+
+
+
+        function erodeAll(inputCanvas) {
+            var countPixels = 0;
+
+            // console.log('dosomething')
+            countPixels = erode(inputCanvas)
+            console.log("countPixels=", countPixels)
+
+            if (countPixels != 0) {
+                //should take save out of here
+                erodeCount++
+                saveImg(inputCanvas, "image" + inputImagesIndex + "-" + erodeCount + ".png")
+                // IDEA: save to array for quicker comp preview.
+                // var fromIndex = fromImgArray.length;
+                // console.log('fromIndex=',fromIndex)
+                // fromImgArray[fromIndex] = new Image();
+                // fromImgArray[fromIndex].src = canvas1a.toDataURL();
+                // console.log("fromImgArray=",fromImgArray)
+            }
+            return countPixels;
+        };
+
+        function tick() {
+            console.log('tick')
+            if (stage == 'erode') {
+                if (erodeAll(canvas1) == 0) {
+                    //stop if all pixels have been eroded
+                    //keep the current value of count
+                    inputImagesCounts[inputImagesIndex] = erodeCount
+                    erodeCount = 0
+                    console.log("counts=", inputImagesCounts)
+                    clearInterval(timerID)
+                }
+            }
+            else if (stage == 'comp') {
+                if (compImages() == 0) {
+                    //stop when all images have been done.
+                    clearInterval(timerID)
+                }
+            } else {
+                console.log("state ERROR")
+            }
+        }
+
+        function button0Click() {
+            console.log("button0Click");
+            inputImagesIndex++
+            console.log("inputImagesIndex=", inputImagesIndex, inputImages[inputImagesIndex]);
+            //shouldn't need this anymore if we've loaded all the input images into an array
+            loadImageIntoCanvas(inputImages[inputImagesIndex], canvas1)
+        }
+
+        function button1Click() {
+            stage = "erode"
+            //set the image shouls be from the array
+            con1.drawImage(image1, 0, 0);
+            erodeCount++
+            saveImg(canvas1, "image" + inputImagesIndex + "-" + erodeCount + ".png")
+            timerID = setInterval(tick, 200);
+        }
+
+        function button2Click() {
+            inputImagesIndex = -1;
+        }
+
+        function button3Click() {
+            //DEBUG: works just need to reset the index and rerun this for the number of images I have.
+            inputImagesIndex++;
+            console.log("comping images ", inputImagesIndex, inputImagesIndex + 1)
+            //YOUAREHERE: so this works for the first two images
+            // need to find a way to then make it work from images2 and 3.
+            compCount1 = 1;
+            //            compCount2 = inputImagesCounts[1] //will only work for the first and second image
+            compCount2 = inputImagesCounts[inputImagesIndex + 1] //will only work for the first and second image
+            //workout Ratio, TODO need max and min calc
+            //just for first 2 atm (also need to do min max checks)
+            compRatio = inputImagesCounts[inputImagesIndex] / inputImagesCounts[inputImagesIndex + 1]
+            console.log(erodeCount, "/", compCount2, "ratio=", compRatio)
+            stage = "comp";
+            timerID = setInterval(tick, 200);
+        }
+
+
+        //not used anymore but lets keep the function around.
+        function createMidPoint(event) {
+            con3.globalCompositeOperation = "source-over"; //default
+            con3.drawImage(image1, 0, 0);
+            con3.globalCompositeOperation = "multiply";
+            con3.drawImage(image2, 0, 0);
+        }
+
+        //so now need to erode the images compleatly.
+        //and could push the joint image over the top each time.
+        //so we garentee a common middle image.
+
+        //once I've generated the images I think that might be another file
+
+        //need to run 2 image streams next to each other
+        // two image compentents, or convases - how am I going to load the images 1 by 1 into the images.
+        // javascript change source with a counter. (can round a fraction to match the array lengths)
+        // after each change build compositie image using a 3rd canvas and Composite canvas
+
+
+        function saveImg(canvas, filename) {
+            var link = document.getElementById('link');
+
+            //probabky shouldn'yt be here (could do it at comp stage?)
+            //copy this image to another canvas and draw midpoint image over it
+            // con1a.globalCompositeOperation = "source-over"; //default
+            // con1a.drawImage(canvas1, 0, 0);
+            // con1a.globalCompositeOperation = "lighter"; //default
+            // con1a.drawImage(canvas3, 0, 0);
+
+            link.setAttribute('download', filename);
+            link.setAttribute('href', canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
+            link.click();
+        }
+
+        function erode(inputCanvas) {
+            var canvasWidth = inputCanvas.width;
+            var canvasHeight = inputCanvas.height;
+            var ctx = inputCanvas.getContext("2d");
+
+            // so creat a byte array and two 'views' that we write to as if it's Uint32 
+            // and then read from to set the image data as if it's Uint8Clamped
+            data1 = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+            buf = new ArrayBuffer(data1.data.length);
+            buf8 = new Uint8ClampedArray(buf);
+            //better name for this.
+            data = new Uint32Array(buf);
+
+            var numPixelsChanged = 0;
+            var offsets = [
+                { x: -1, y: -1 },
+                { x: 0, y: -1 },
+                { x: 1, y: -1 },
+                { x: -1, y: 0 },
+                { x: 1, y: 0 },
+                { x: -1, y: 1 },
+                { x: 0, y: 1 },
+                { x: 1, y: 1 },
+            ]
+            for (var y = 1; y < canvasHeight - 1; ++y) {
+                for (var x = 1; x < canvasWidth - 1; ++x) {
+                    //read source image data, is greyscale so just use red
+                    index = (x + (y * data1.width)) * 4;
+                    r1 = data1.data[index];
+                    g1 = data1.data[index + 1];
+                    b1 = data1.data[index + 2];
+                    // a1 = data1.data[index + 3];
+
+                    //in b/w mode we can probably make some assumptions about what these start as ie 0 or 255
+                    var newB = b1;
+                    var newG = g1;
+                    var newR = r1;
+                    var r1Total = 0;
+                    //do nothing if already black, or if white in the destination image
+                    //ie. only do something if this pixel isn't already black
+                    //and the final colour of this pixels isn't going to be white.
+                    // if ((r1 != 0) && (r2 != 255)) {
+                    //the problem with testing pixels in the dest image is that it can block some pixels that should be eroded
+                    if (r1 != 0) {
+                        offsets.forEach(offset => {
+                            var Sindex = ((x + offset.x) + ((y + offset.y) * data1.width)) * 4;
+                            r1 = data1.data[Sindex];
+                            r1Total = r1Total + r1
+                        })
+                        //if this pixel is touching any black make black.
+                        //(or cut it's brightness by d)
+                        if (r1Total != (8 * 255)) {
+                            newB = 0
+                            newG = 0
+                            newR = 0
+                        }
+                        if (r1 != newR) {
+                            numPixelsChanged++;
+                        }
+                    }
+                    //write new values
+                    data[y * canvasWidth + x] =
+                        (255 << 24) |    // alpha
+                        (newB << 16) |    // blue
+                        (newG << 8) |    // green
+                        newR;            // red
+
+
+                }
+            }
+            console.log("numPixelsChanged=", numPixelsChanged)
+            data1.data.set(buf8);
+            //copy back over source image.
+            ctx.putImageData(data1, 0, 0);
+            return numPixelsChanged;
+        }
+
+        //just do the first 2
+        //DEBUG: pass in whereever we can, just going to be index, because the second set will be index + 1
+        //DEBUG: rename compCount1 as countUp, countDown
+        function compImages() {
+            //DEBUG was going to pass this in, why / why not
+            index = inputImagesIndex;
+            console.log("loadnums comp1=", Math.floor(compCount1), "comp2=", Math.floor(compCount2))
+
+            //DEBUG: hardcoded 0
+            compImage1.src = "./myDownloads/image" + index + "-" + Math.floor(compCount1) + ".png"
+
+            compImage1.onload = function () {
+                compCtx.globalCompositeOperation = "source-over"; //default
+                compCtx.drawImage(compImage1, 0, 0);
+                //DEBUG: hardcoded 1
+                compImage2.src = "./myDownloads/image" + (index + 1) + "-" + Math.floor(compCount2) + ".png"
+
+            };
+            compImage2.onload = function () {
+                compCtx.globalCompositeOperation = "screen";
+                compCtx.drawImage(compImage2, 0, 0);
+                saveImg(compCanvas, 'comp' + compCount + ".png")
+                compCount++
+
+            };
+
+
+            //this probably needs to be a callback from above. maybe maybe not.
+            let returnValue = 1;
+            if ((compCount1 >= inputImagesCounts[index]) || (compCount2 <= 1)) {
+                console.log('stop')
+                returnValue = 0;
+            }
+            compCount1 += compRatio;
+            compCount2--;
+            return returnValue //0 to stop
+        }
+
+        function clamp(x, minX, maxX) {
+            return Math.min(maxX, Math.max(minX, x))
+        }
+
+        function bodyImgMove(event) {
+            const pos = event.currentTarget.getBoundingClientRect();
+            let y = event.y - pos.y
+            let imageNumber = clamp(Math.floor(y - 65), 0, 253) //253 is number of comp images
+
+            bodyCtx.fillStyle = "black";
+            bodyCtx.fillRect(0, 0, bodyCanvas.width, bodyCanvas.height);
+
+            bodyCtx.drawImage(bodyimage, 50, 55, 100, 275);
+            bodyCtx.strokeStyle = "#FF0000";
+            bodyCtx.beginPath();
+            bodyCtx.moveTo(0, y);
+            bodyCtx.lineTo(300, y);
+            bodyCtx.stroke();   
+            //0 - 237
+            console.log("imageNumber", imageNumber)
+            MRICtx.drawImage(compImagesArray[imageNumber], 75, 75, 400, 400);
+
+        }
+
+        const imageURL = ["foreground.jpg", "background.jpg"]; // list of image URLs
+        const images = []; /// array to hold images.
+        var imageCount = 0; // number of loaded images;
+
+        let compImageURL = []
+        let compImagesArray = []
+
+        //DEBUG should be called imgSources
+        function loadImageArray(imageArray, callback) {
+            let temp = new Array;
+            // iterate each image URL, create, load, and add it to the images array
+            imageArray.forEach(src => {  // for each image url
+                const image = new Image();
+                image.src = src;
+                image.onload = () => {
+                    imageCount += 1;
+                    if (imageCount === imageArray.length) { // have all loaded????
+                        callback(); // call function to start rendering
+                    }
+                }
+                temp.push(image);
+            });
+            //should be in callback?
+            return temp;
+        }
+
+        function bodySetup() {
+            compImageURL = buildFilesIntoArray("./myDownloads/comp", 253); //number of comp images, updated manually
+            compImagesArray = loadImageArray(compImageURL, allCompLoaded);
+            //load the body image and draw it for the first time.
+
+            MRICtx.fillStyle = "black";
+            MRICtx.fillRect(0, 0, MRICanvas.width, MRICanvas.height);
+
+            loadImage2("body1-smaller.png", bodyimage, function () {
+                console.log("image loaded")
+                bodyCtx.drawImage(bodyimage, 0, 0);
+                bodyCtx.fillStyle = "black";
+                bodyCtx.fillRect(0, 0, bodyCanvas.width, bodyCanvas.height);
+                bodyCtx.drawImage(bodyimage, 50, 55, 100, 275);
+            })
+        }
+
+        function buildFilesIntoArray(filenamepart, num) {
+            temp = new Array();
+            for (i = 0; i <= num; i++) {
+                temp.push(filenamepart + i + ".png")
+            }
+            return temp
+        }
+
+        function allCompLoaded() {
+            console.log("compImagesArray=", compImagesArray)
+        }
+
+        // function called once all images have loaded.
+        function allLoaded() {
+            MRICtx.drawImage(images[2], 0, 0);
+        }
+
+    </script>
+</head>
+
+<body style="background:black;">
+    <!-- <button style="width:50px; height:20px;" id="interface">swap</button> -->
+    <div id="buildInterface" style="border:solid 1px darkred; display:none;">
+        <canvas id="canvas1" height="200" width="200"></canvas>
+        <canvas id="canvas2" height="200" width="200"></canvas>
+        <canvas id="canvas1a" height="200" width="200"></canvas>
+        <br />
+        <!-- <img id="image2" src="" style="display: span;"> -->
+        <br />
+        <img id="compImage1" src="" style="display: span;">
+        <img id="compImage2" src="" style="display: span;">
+        <canvas id="compCanvas" height="200" width="200"></canvas>
+        <br />
+        <button style="width:50px; height:50px;" id="button0">0</button>
+        <button style="width:50px; height:50px;" id="button1">1</button>
+        <button style="width:50px; height:50px;" id="button2">reset index</button>
+        <button style="width:50px; height:50px;" id="button3">3</button><br />
+        <!-- could create this in js -->
+        <a id="link"></a>
+    </div>
+    <div id="showInterface" style="display:block; background: black url('/MRIScans/MRIblank-lofi.png') no-repeat left bottom; background-size: 900px; width:900px; height:630px; margin:130px auto;">
+        <canvas id="bodyCanvas" height="400" width="200" style="xopacity: 0.3;"></canvas>
+        <canvas id="MRICanvas" height="500" width="500"></canvas>
+        <br />
+    </div>
+</body>
+
+</html>
