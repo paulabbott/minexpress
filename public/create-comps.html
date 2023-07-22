@@ -1,0 +1,261 @@
+<html>
+  <head>
+    <script>
+      var inputImages = [
+        "black.png",
+        "head.png",
+        "einstein.png",
+        "knee.png",
+        "mirror.png",
+        "b.png",
+        "placenta.png",
+        "qr-replaceme.png",
+        "brain-norm.png",
+        "dog.png",
+        "skyscrappers.png",
+        "cat200-moreblack.png",
+        "deadbird.png",
+        "ida-fossil.png",
+        "knee-brace.png",
+        "LE.png",
+        "OT.png",
+        "VA.png",
+        "EH.png",
+        "noise.png",
+        "feet1.png",
+        "feet2.png",
+        "feet3.png",
+        "RIP.png",
+        "black.png",
+      ];
+
+      //TODO: localise these globals
+      var inputImagesIndex = -1;
+      var inputImagesCounts = [];
+      var canvasWidth, canvasHeight;
+      var buf, buf8, data;
+      var erodeCount = 0;
+      var compCount1 = 1;
+      var compCount2 = 1;
+      var compRatio = 1;
+      var compCount = 0;
+      var timerID;
+      var sourceCanvas;
+      let errodedImages = [];
+
+      // use in memory images rather than on page.
+      //could still do this.
+      // var image1 = document.createElement('img');
+      // var image2 = document.createElement('img');
+
+      window.addEventListener("load", (event) => {
+        document
+          .getElementById("button2")
+          .addEventListener("click", function (event) {
+            button2Click(event);
+          });
+        document
+          .getElementById("button3")
+          .addEventListener("click", function (event) {
+            button3Click(event);
+          });
+        setup();
+      });
+
+      function setup() {
+        compCanvas = document.getElementById("compCanvas");
+        canvasWidth = compCanvas.width;
+        canvasHeight = compCanvas.height;
+        compCtx = compCanvas.getContext("2d");
+      }
+
+      function loadFileIntoCanvas(file, canvas) {
+        let ctx = canvas.getContext("2d");
+        let tempimage = document.createElement("img");
+        tempimage.src = file;
+        tempimage.onload = function () {
+          ctx.drawImage(tempimage, 0, 0, canvas.width, canvas.height);
+          // setup();
+        };
+        tempimage.onerror = function () {
+          console.log("ERROR: could not load " + file);
+        };
+      }
+
+      function tick() {
+        console.log("tick");
+        if (compImages() == 0) {
+          //stop when comp for these two images have been done.
+          clearInterval(timerID);
+        }
+      }
+
+      //reset
+      function button2Click() {
+        inputImagesIndex = -1;
+        inputImagesCounts = JSON.parse(
+          localStorage.getItem("inputImagesCounts")
+        );
+        // console.log("inputImagesCounts=", inputImagesCounts);
+      }
+
+      function button3Click() {
+        //processes one set of images
+        //is this is really a foreach on inputImagesCounts?
+        console.log('inputImagesIndex=',inputImagesIndex,inputImages.length)
+        //YOUAREHERE
+        //there's something better than just calling this n number of times.
+        if (inputImagesIndex < inputImages.length) {
+          console.log('and go')
+          go()
+        } else {
+          console.log('done')
+        }
+      }
+
+      //sets some stuff up starts the timer
+      function go(){
+        //DEBUG: works just need to reset the index and rerun this for the number of images I have.
+        inputImagesIndex++;
+        const image1name = inputImages[inputImagesIndex];
+        const image2name = inputImages[inputImagesIndex + 1];
+
+        compCount1 = 0; // becaues we start at the start
+        compCount2 = inputImagesCounts[image2name].length; //because we start at the end
+
+        // console.log("comping images ", image1name, image2name);
+        // console.log("comp1=", compCount1, "comp2=", compCount2);
+        //workout Ratio, TODO need max and min calc
+        if (inputImagesCounts[image1name].length === 0) {
+          // console.log(image1name, ".length = 0");
+          compRatio = 0;
+        } else if (inputImagesCounts[image2name].length === 0) {
+          compRatio = 0;
+          // console.log(image2name, ".length = 0");
+        } else {
+          compRatio =
+            inputImagesCounts[image1name].length /
+            inputImagesCounts[image2name].length;
+        }
+        // console.log(
+        //   inputImagesCounts[image1name].length,
+        //   "/",
+        //   inputImagesCounts[image2name].length,
+        //   "ratio=",
+        //   compRatio
+        // );
+        timerID = setInterval(tick, 200);
+      }
+
+      const loadImageFromArray = (filename, canvasId) => {
+        // console.log("load", filename, "into", canvasId);
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext("2d");
+        const storedImageData = errodedImages.filename;
+        // console.log("storedImageData=", storedImageData);
+        ctx.putImageData(storedImageData, 0, 0);
+      };
+
+      function saveImg(canvas, filename) {
+        var link = document.getElementById("link");
+        link.setAttribute("download", filename);
+        link.setAttribute(
+          "href",
+          canvas
+            .toDataURL("image/png")
+            .replace("image/png", "image/octet-stream")
+        );
+        link.click();
+      }
+
+      function saveImgToArray(canvas, filename) {
+        const ctx = canvas.getContext("2d");
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        errodedImages.push({ [filename]: data });
+        // console.log("errodedImages=", errodedImages);
+      }
+
+      //NOTE: this function presumes that the erode files exsist in downloads and are name 'image-n"
+      //could pass in names or indexnumbers here
+      function compImages() {
+        index = inputImagesIndex;
+
+        // NOTE: myDownloads is a symlink to ~/downloads
+        const filename1 =
+          "./myDownloads/image" + index + "-" + Math.floor(compCount1) + ".png";
+        // console.log("looking for 1", filename1);
+        compImage1.src = filename1;
+        // loadImageFromArray(filename1,compImage1)
+
+        compImage1.onload = function () {
+          compCtx.globalCompositeOperation = "source-over"; //default
+          compCtx.drawImage(compImage1, 0, 0);
+          // console.log("compCount2=", compCount2);
+          const filename2 =
+            "./myDownloads/image" +
+            (index + 1) +
+            "-" +
+            Math.floor(compCount2) +
+            ".png";
+          // console.log("looking for 2", filename2);
+          compImage2.src = filename2;
+          //   loadImageFromArray(filename2, compImage2);
+        };
+        compImage2.onload = function () {
+          compCtx.globalCompositeOperation = "screen";
+          compCtx.drawImage(compImage2, 0, 0);
+          saveImg(compCanvas, "comp" + compCount + ".png");
+          compCount++;
+        };
+
+        //this probably needs to be a callback from above. maybe maybe not.
+        let returnValue = 1;
+        if (compCount1 >= inputImagesCounts[index] || compCount2 <= 1) {
+          console.log("stop");
+          returnValue = 0;
+        }
+        compCount1 += compRatio;
+        // console.log("update compCount1=", compCount1);
+        compCount2--;
+        return returnValue; //0 to stop
+      }
+
+      function clamp(x, minX, maxX) {
+        return Math.min(maxX, Math.max(minX, x));
+      }
+    </script>
+  </head>
+
+  <body>
+    compImage1:
+    <img
+      id="compImage1"
+      src=""
+      height="200"
+      width="200"
+      style="border: solid 1px red"
+    />
+    compImage2:
+    <img
+      id="compImage2"
+      src=""
+      height="200"
+      width="200"
+      style="border: solid 1px green"
+    />
+    compCanvas:
+    <canvas
+      id="compCanvas"
+      height="200"
+      width="200"
+      style="border: solid 1px blue"
+    >
+    </canvas>
+    <br />
+    <button style="width: 50px; height: 50px" id="button2">reset</button>
+    <button style="width: 50px; height: 50px" id="button3">3</button>
+    ><br />
+    <!-- could create this in js -->
+    <a id="link"></a>
+  </body>
+</html>

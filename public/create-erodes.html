@@ -1,248 +1,280 @@
-<html>
+<!-- This does work, and saves the images into downloads but with a differnt file name to the one  
+    expected in create-comps. DON'T USE-->
 
-<head>
+<html>
+  <head>
     <!-- DEBUG:split your code -->
     <script>
+      var inputImages = [
+        "black.png",
+        "head.png",
+        "einstein.png",
+        "knee.png",
+        "mirror.png",
+        "b.png",
+        "placenta.png",
+        "qr-replaceme.png",
+        "brain-norm.png",
+        "dog.png",
+        "skyscrappers.png",
+        "cat200-moreblack.png",
+        "deadbird.png",
+        "ida-fossil.png",
+        "knee-brace.png",
+        "LE.png",
+        "OT.png",
+        "VA.png",
+        "EH.png",
+        "noise.png",
+        "feet1.png",
+        "feet2.png",
+        "feet3.png",
+        "RIP.png",
+        "black.png",
+      ];
 
-        var inputImages = [
-            "black.png",
-            "head.png",
-            "einstein.png",
-            "knee.png",
-            "mirror.png",
-            "b.png",
-            "placenta.png",
-            "qr-replaceme.png",
-            "brain-norm.png",
-            "dog.png",
-            "skyscrappers.png",
-            "cat200-moreblack.png",
-            "deadbird.png",
-            "ida-fossil.png",
-            "knee-brace.png",
-            "LE.png",
-            "OT.png",
-            "VA.png",
-            "EH.png",
-            "noise.png",
-            "feet1.png",
-            "feet2.png",
-            "feet3.png",
-            "RIP.png",
-            "black.png",
-        ]
+      var inputImagesIndex = -1;
+      var inputImagesCounts = {};
 
-        var inputImagesIndex = -1
-        var inputImagesCounts = {}
+      //maybe get rid of some of these globals.
+      var con1;
+      var canvasWidth, canvasHeight;
+      var data1, data2;
+      var buf, buf8, data;
+      var erodeCount = 0;
+      var timerID;
+      var sourceCanvas;
+      const bodyimage = new Image();
 
-        //maybe get rid of some of these globals.
-        var con1;
-        var canvasWidth, canvasHeight;
-        var data1, data2;
-        var buf, buf8, data;
-        var erodeCount = 0;
-        var timerID;
-        var sourceCanvas;
-        const bodyimage = new Image();
+      //use in memory images rather than on page.
+      var image1 = document.createElement("img");
+      var image2 = document.createElement("img");
+      //whats the best way to then set the source on these are wait till there loaded.
+      // not sure I even need to any more?
 
-        //use in memory images rather than on page.
-        var image1 = document.createElement('img');
-        var image2 = document.createElement('img');
-        //whats the best way to then set the source on these are wait till there loaded.
-        // not sure I even need to any more?
+      //IDEA: load first image, don'ty know if we need it yet.
+      // fromImgArray[0] = new Image();
+      // fromImgArray[0].src = 'jspaint.png';
+      // console.log("fromImgArray=", fromImgArray)
+      // toImgArray[0] = new Image();
+      // toImgArray[0].src = 'cat-grey.png';
 
+      window.addEventListener("load", (event) => {
+        document
+          .getElementById("button1")
+          .addEventListener("click", function (event) {
+            button1Click(event);
+          });
+        document
+          .getElementById("button2")
+          .addEventListener("click", function (event) {
+            button2Click(event);
+          });
 
-        //IDEA: load first image, don'ty know if we need it yet.
-        // fromImgArray[0] = new Image();
-        // fromImgArray[0].src = 'jspaint.png';
-        // console.log("fromImgArray=", fromImgArray)
-        // toImgArray[0] = new Image();
-        // toImgArray[0].src = 'cat-grey.png';
+        canvas1 = document.getElementById("canvas1");
+        canvasWidth = canvas1.width;
+        canvasHeight = canvas1.height;
+        con1 = canvas1.getContext("2d");
+      });
 
-        window.addEventListener('load', (event) => {
-            document.getElementById("button1").addEventListener('click', function (event) { button1Click(event) });            
-            canvas1 = document.getElementById("canvas1");
-            canvasWidth = canvas1.width;
-            canvasHeight = canvas1.height;
-            con1 = canvas1.getContext("2d");
-        });
-
-        function loadImageIntoCanvas(file, canvas) {
-            let ctx = canvas.getContext("2d");
-            let tempimage = document.createElement('img');
-            tempimage.src = file
-            tempimage.onload = function () {
-                console.log(file + " loaded into " + tempimage)
-                console.log("canvas size", canvas.width);
-                ctx.drawImage(tempimage, 0, 0, canvas.width, canvas.height);
-            }
-            tempimage.onerror = function () {
-                console.log("ERROR: could not load " + file)
-            }
-        }
-
-        function dropFileExtension(filename){
-            return filename.replace(/\.[^/.]+$/, "")
-        }
-
-        function erodeAll(inputCanvas) {
-            var countPixels = 0;
-            countPixels = erode(inputCanvas)
-            if (countPixels != 0) {
-                erodeCount++
-                saveImg(inputCanvas, dropFileExtension(inputImages[inputImagesIndex]) + "-" + erodeCount + ".png")
-                // IDEA: save to array for quicker comp preview.
-                // var fromIndex = fromImgArray.length;
-                // console.log('fromIndex=',fromIndex)
-                // fromImgArray[fromIndex] = new Image();
-                // fromImgArray[fromIndex].src = canvas1a.toDataURL();
-                // console.log("fromImgArray=",fromImgArray)
-            }
-            return countPixels;
+      function loadImageIntoCanvas(file, canvas, callback) {
+        let ctx = canvas.getContext("2d");
+        let tempimage = document.createElement("img");
+        tempimage.src = file;
+        tempimage.onload = function () {
+          console.log(file + " loaded into " + tempimage);
+          console.log("canvas size", canvas.width);
+          ctx.drawImage(tempimage, 0, 0, canvas.width, canvas.height);
+          //?
+          callback();
         };
+        tempimage.onerror = function () {
+          console.log("ERROR: could not load " + file);
+        };
+        return true;
+      }
 
-        function button1Click() {
-            loadNextImage()
+      function dropFileExtension(filename) {
+        return filename.replace(/\.[^/.]+$/, "");
+      }
+
+      function erodeAll(inputCanvas) {
+        var countPixels = 0;
+        countPixels = erode(inputCanvas);
+        if (countPixels != 0) {
+          const filename =
+            "image" + inputImagesIndex + "-" + erodeCount + ".png";
+          console.log("2 - filename=", filename);
+          saveImg(inputCanvas, filename);
+          erodeCount++;
         }
+        return countPixels;
+      }
 
-        function loadNextImage(){
-            inputImagesIndex++
-            if (inputImagesIndex < inputImages.length) {
-                let filename = "images/" + inputImages[inputImagesIndex]
-                DoIt(filename)
-            } else {
-                console.log('all done')
-                saveCounts()
-            }            
+      async function button1Click() {
+        loadNextImage();
+      }
+
+      function button2Click() {
+        console.log("button2click");
+        clearInterval(timerID);
+      }
+
+      function loadNextImage() {
+        inputImagesIndex++;
+        if (inputImagesIndex < inputImages.length) {
+          let filename = "images/" + inputImages[inputImagesIndex];
+          DoIt(filename);
+        } else {
+          console.log("all done");
+          saveCounts();
         }
+      }
 
-        function DoIt(filename) {
-            loadImageIntoCanvas(filename, canvas1)
-            con1 = canvas1.getContext("2d");
-            con1.drawImage(image1, 0, 0);
-            //not quite sure why i need this here, but seems to work better with.
-            erodeCount++
-            saveImg(canvas1, dropFileExtension(inputImages[inputImagesIndex]) + "-" + erodeCount + ".png")
-            timerID = setInterval(tick, 300);            
+      function DoIt(filename) {
+        //erm don't like the callback here, work out how to remove it
+        const savefilename =
+          "image" + inputImagesIndex + "-" + erodeCount + ".png";
+        console.log("1 - savefilename", savefilename);
+        loadImageIntoCanvas(filename, canvas1, () =>
+          saveImg(canvas1, savefilename)
+        );
+        erodeCount++;
+        timerID = setInterval(tick, 300);
+      }
+
+      //am I even usng the timer here?
+      function tick() {
+        console.log("tick");
+        if (erodeAll(canvas1) == 0) {
+          //stop if all pixels have been eroded
+          //keep the current value of count
+          inputImagesCounts[inputImages[inputImagesIndex]] = {
+            length: erodeCount,
+          };
+          erodeCount = 0;
+          clearInterval(timerID);
+          loadNextImage();
         }
+      }
 
-        function tick() {
-            if (erodeAll(canvas1) == 0) {
-                //stop if all pixels have been eroded
-                //keep the current value of count
-                inputImagesCounts[inputImages[inputImagesIndex]] = {length: erodeCount}
-                erodeCount = 0
-                clearInterval(timerID)
-                loadNextImage()
+      function saveCounts() {
+        console.log("inputImagesCounts=", inputImagesCounts);
+        //save the array
+        const objAsText = JSON.stringify(inputImagesCounts);
+
+        console.log("objAsText=", objAsText);
+        //saves as txt by default?
+        saveText(objAsText, "inputImagesCounts.json");
+        //also put it in localstaorage
+        localStorage.setItem("inputImagesCounts", objAsText);
+        //localStorage.getItem("lastname");
+        inputImagesIndex = -1;
+      }
+
+      function saveImg(canvas, filename) {
+        console.log("saveImg", filename);
+        var link = document.getElementById("link");
+        link.setAttribute("download", filename);
+        link.setAttribute(
+          "href",
+          canvas
+            .toDataURL("image/png")
+            .replace("image/png", "image/octet-stream")
+        );
+        link.click();
+      }
+
+      function saveText(text, filename) {
+        var link = document.getElementById("link");
+        link.setAttribute("download", filename);
+        link.setAttribute(
+          "href",
+          "data:text/plain;charset=utf-8," + encodeURIComponent(text)
+        );
+        link.click();
+      }
+
+      function erode(inputCanvas) {
+        var canvasWidth = inputCanvas.width;
+        var canvasHeight = inputCanvas.height;
+        var ctx = inputCanvas.getContext("2d");
+
+        // so creat a byte array and two 'views' that we write to as if it's Uint32
+        // and then read from to set the image data as if it's Uint8Clamped
+        data1 = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+        buf = new ArrayBuffer(data1.data.length);
+        buf8 = new Uint8ClampedArray(buf);
+        //better name for this.
+        data = new Uint32Array(buf);
+
+        var numPixelsChanged = 0;
+        var offsets = [
+          { x: -1, y: -1 },
+          { x: 0, y: -1 },
+          { x: 1, y: -1 },
+          { x: -1, y: 0 },
+          { x: 1, y: 0 },
+          { x: -1, y: 1 },
+          { x: 0, y: 1 },
+          { x: 1, y: 1 },
+        ];
+        for (var y = 1; y < canvasHeight - 1; ++y) {
+          for (var x = 1; x < canvasWidth - 1; ++x) {
+            //read source image data, is greyscale so just use red
+            index = (x + y * data1.width) * 4;
+            r1 = data1.data[index];
+            g1 = data1.data[index + 1];
+            b1 = data1.data[index + 2];
+            // a1 = data1.data[index + 3];
+
+            //in b/w mode we can probably make some assumptions about what these start as ie 0 or 255
+            var newB = b1;
+            var newG = g1;
+            var newR = r1;
+            var r1Total = 0;
+            //do nothing if already black, or if white in the destination image
+            //ie. only do something if this pixel isn't already black
+            //and the final colour of this pixels isn't going to be white.
+            // if ((r1 != 0) && (r2 != 255)) {
+            //the problem with testing pixels in the dest image is that it can block some pixels that should be eroded
+            if (r1 != 0) {
+              offsets.forEach((offset) => {
+                var Sindex = (x + offset.x + (y + offset.y) * data1.width) * 4;
+                r1 = data1.data[Sindex];
+                r1Total = r1Total + r1;
+              });
+              //if this pixel is touching any black make black.
+              //(or cut it's brightness by d)
+              if (r1Total != 8 * 255) {
+                newB = 0;
+                newG = 0;
+                newR = 0;
+              }
+              if (r1 != newR) {
+                numPixelsChanged++;
+              }
             }
+            //write new values
+            data[y * canvasWidth + x] =
+              (255 << 24) | // alpha
+              (newB << 16) | // blue
+              (newG << 8) | // green
+              newR; // red
+          }
         }
-
-        function saveCounts() {
-            //save the array
-            const objAsText = JSON.stringify(inputImagesCounts);
-            saveText(objAsText,"inputImagesCounts");
-            inputImagesIndex = -1;
-        }
-
-        function saveImg(canvas, filename) {
-            var link = document.getElementById('link');
-            link.setAttribute('download', filename);
-            link.setAttribute('href', canvas.toDataURL("image/png").replace("image/png", "image/octet-stream"));
-            link.click();
-        }
-
-        function saveText(text, filename) {
-            var link = document.getElementById('link');
-            link.setAttribute('download', filename);
-            link.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-            link.click();
-        }
-
-        function erode(inputCanvas) {
-            var canvasWidth = inputCanvas.width;
-            var canvasHeight = inputCanvas.height;
-            var ctx = inputCanvas.getContext("2d");
-
-            // so creat a byte array and two 'views' that we write to as if it's Uint32 
-            // and then read from to set the image data as if it's Uint8Clamped
-            data1 = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
-            buf = new ArrayBuffer(data1.data.length);
-            buf8 = new Uint8ClampedArray(buf);
-            //better name for this.
-            data = new Uint32Array(buf);
-
-            var numPixelsChanged = 0;
-            var offsets = [
-                { x: -1, y: -1 },
-                { x: 0, y: -1 },
-                { x: 1, y: -1 },
-                { x: -1, y: 0 },
-                { x: 1, y: 0 },
-                { x: -1, y: 1 },
-                { x: 0, y: 1 },
-                { x: 1, y: 1 },
-            ]
-            for (var y = 1; y < canvasHeight - 1; ++y) {
-                for (var x = 1; x < canvasWidth - 1; ++x) {
-                    //read source image data, is greyscale so just use red
-                    index = (x + (y * data1.width)) * 4;
-                    r1 = data1.data[index];
-                    g1 = data1.data[index + 1];
-                    b1 = data1.data[index + 2];
-                    // a1 = data1.data[index + 3];
-
-                    //in b/w mode we can probably make some assumptions about what these start as ie 0 or 255
-                    var newB = b1;
-                    var newG = g1;
-                    var newR = r1;
-                    var r1Total = 0;
-                    //do nothing if already black, or if white in the destination image
-                    //ie. only do something if this pixel isn't already black
-                    //and the final colour of this pixels isn't going to be white.
-                    // if ((r1 != 0) && (r2 != 255)) {
-                    //the problem with testing pixels in the dest image is that it can block some pixels that should be eroded
-                    if (r1 != 0) {
-                        offsets.forEach(offset => {
-                            var Sindex = ((x + offset.x) + ((y + offset.y) * data1.width)) * 4;
-                            r1 = data1.data[Sindex];
-                            r1Total = r1Total + r1
-                        })
-                        //if this pixel is touching any black make black.
-                        //(or cut it's brightness by d)
-                        if (r1Total != (8 * 255)) {
-                            newB = 0
-                            newG = 0
-                            newR = 0
-                        }
-                        if (r1 != newR) {
-                            numPixelsChanged++;
-                        }
-                    }
-                    //write new values
-                    data[y * canvasWidth + x] =
-                        (255 << 24) |    // alpha
-                        (newB << 16) |    // blue
-                        (newG << 8) |    // green
-                        newR;            // red
-
-
-                }
-            }
-            data1.data.set(buf8);
-            //copy back over source image.
-            ctx.putImageData(data1, 0, 0);
-            return numPixelsChanged;
-        }
-
+        data1.data.set(buf8);
+        //copy back over source image.
+        ctx.putImageData(data1, 0, 0);
+        return numPixelsChanged;
+      }
     </script>
-</head>
+  </head>
 
-<body style="background:white;">
-    <div id="buildInterface" style="background:white; border:solid 1px darkred; display:block;">
-        <canvas id="canvas1" height="200" width="200"></canvas>
-        <button style="width:50px; height:50px;" id="button1">1</button>
-        <a id="link"></a>
-    </div>
-</body>
-
+  <body style="background: white">
+    <canvas id="canvas1" height="200" width="200"></canvas>
+    <button style="width: 50px; height: 50px" id="button1">go</button>
+    <button style="width: 50px; height: 50px" id="button2">stop</button>
+    <a id="link"></a>
+  </body>
 </html>

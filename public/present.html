@@ -1,0 +1,164 @@
+<html>
+<head>
+    <script>
+        var inputImagesIndex = -1
+        var inputImagesCounts = []
+        var con1;
+        var canvasWidth, canvasHeight;
+        var data1, data2;
+        var buf, buf8, data;
+        var stage = "erode"
+        var erodeCount = 0;
+        var compCount1 = 1;
+        var compCount2 = 1;
+        var compRatio = 1;
+        var compCount = 0
+        var timerID;
+        var sourceCanvas;
+        var MRICtx;
+        var bodyCtx;
+        const bodyimage = new Image();
+
+        //use in memory images rather than on page.
+        var image1 = document.createElement('img');
+        var image2 = document.createElement('img');
+
+        window.addEventListener('load', (event) => {
+            console.log('window loaded')
+            document.getElementById("bodyCanvas").addEventListener('mousemove', function (event) { bodyImgMove(event) });
+            setup();
+
+        });
+
+        function setup() {
+            console.log('in setup')
+            bodyCanvas = document.getElementById("bodyCanvas");
+            MRICanvas = document.getElementById("MRICanvas");
+            bodyCtx = bodyCanvas.getContext("2d");
+            MRICtx = MRICanvas.getContext("2d");
+            bodySetup();
+        }
+
+        function loadImageIntoCanvas(file, canvas) {
+            let ctx = canvas.getContext("2d");
+            let tempimage = document.createElement('img');
+            tempimage.src = file
+            tempimage.onload = function () {
+                console.log(file + " loaded into " + tempimage)
+                console.log("canvas size", canvas.width);
+                ctx.drawImage(tempimage, 0, 0, canvas.width, canvas.height);
+                // setup();
+            }
+            tempimage.onerror = function () {
+                console.log("ERROR: could not load " + file)
+            }
+        }
+
+        function loadImage2(file, image, callback) {
+            image.src = file
+            image.onload = function () {
+                callback()
+            }
+            image.onerror = function () {
+                console.log("ERROR: could not load " + file)
+            }
+        }
+
+        function clamp(x, minX, maxX) {
+            return Math.min(maxX, Math.max(minX, x))
+        }
+
+        function bodyImgMove(event) {
+            const pos = event.currentTarget.getBoundingClientRect();
+            let y = event.y - pos.y
+            console.log('compImagesArray.length=',compImagesArray.length)
+            let imageNumber = clamp(Math.floor(y - 65), 0, compImagesArray.length)
+
+            bodyCtx.fillStyle = "black";
+            bodyCtx.fillRect(0, 0, bodyCanvas.width, bodyCanvas.height);
+
+            bodyCtx.drawImage(bodyimage, 50, 55, 100, 275);
+            bodyCtx.strokeStyle = "#FF0000";
+            bodyCtx.beginPath();
+            bodyCtx.moveTo(0, y);
+            bodyCtx.lineTo(300, y);
+            bodyCtx.stroke();   
+            //0 - 237
+            console.log("imageNumber", imageNumber)
+            MRICtx.drawImage(compImagesArray[imageNumber], 75, 75, 400, 400);
+
+        }
+
+        const imageURL = ["foreground.jpg", "background.jpg"]; // list of image URLs
+        const images = []; /// array to hold images.
+        var imageCount = 0; // number of loaded images;
+
+        let compImageURL = []
+        let compImagesArray = []
+
+        //DEBUG should be called imgSources
+        function loadImageArray(imageArray, callback) {
+            let temp = new Array;
+            // iterate each image URL, create, load, and add it to the images array
+            imageArray.forEach(src => {  // for each image url
+                const image = new Image();
+                image.src = src;
+                image.onload = () => {
+                    imageCount += 1;
+                    if (imageCount === imageArray.length) { // have all loaded????
+                        callback(); // call function to start rendering
+                    }
+                }
+                temp.push(image);
+            });
+            //should be in callback?
+            return temp;
+        }
+
+        function bodySetup() {
+            // compImageURL = buildFilesIntoArray("./compImages-v1/comp", 253); //number of comp images, updated manually
+            compImageURL = buildFilesIntoArray("./compImages-v2/comp", 291); //number of comp images, updated manually
+            compImagesArray = loadImageArray(compImageURL, allCompLoaded);
+            //load the body image and draw it for the first time.
+
+            MRICtx.fillStyle = "black";
+            MRICtx.fillRect(0, 0, MRICanvas.width, MRICanvas.height);
+
+            loadImage2("body1-smaller.png", bodyimage, function () {
+                console.log("image loaded")
+                bodyCtx.drawImage(bodyimage, 0, 0);
+                bodyCtx.fillStyle = "black";
+                bodyCtx.fillRect(0, 0, bodyCanvas.width, bodyCanvas.height);
+                bodyCtx.drawImage(bodyimage, 50, 55, 100, 275);
+            })
+        }
+
+        function buildFilesIntoArray(filenamepart, num) {
+            temp = new Array();
+            for (i = 0; i <= num; i++) {
+                temp.push(filenamepart + i + ".png")
+            }
+            return temp
+        }
+
+        function allCompLoaded() {
+            console.log("compImagesArray=", compImagesArray)
+        }
+
+        // function called once all images have loaded.
+        function allLoaded() {
+            MRICtx.drawImage(images[2], 0, 0);
+        }
+
+    </script>
+</head>
+
+<body style="background:black;">
+    <div id="showInterface" style="display:block; background: black url('https://paulabbott.github.io/public/MRIScans/MRIblank-lofi.png') no-repeat left bottom; background-size: 900px; width:900px; height:630px; margin:130px auto;">
+        <canvas id="bodyCanvas" height="400" width="200" style="xopacity: 0.3;"></canvas>
+        <canvas id="MRICanvas" height="500" width="500"></canvas>
+        <br />
+    </div>
+</body>
+
+</html>
