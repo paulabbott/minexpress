@@ -1,5 +1,17 @@
 # Bodyscan
 
+14th Sept
+backend image saving
+move the project to nextjs
+have your own route for saving images
+then it's a question where to host, vercel does server side storage now?
+but if not spin up EC2 - there will be a way to work it out
+and nextjs is a good next step.
+
+clean nextjs project
+
+
+
 ## Setup
 
 depends on a hacky way of getting images in and out of the code by setting a symlink to Downloads
